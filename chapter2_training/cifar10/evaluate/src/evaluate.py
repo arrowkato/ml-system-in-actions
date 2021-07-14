@@ -11,7 +11,7 @@ import numpy as np
 from PIL import Image
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import accuracy_score
-from src.proto import onnx_ml_pb2, predict_pb2, prediction_service_pb2_grpc
+from chapter2_training.cifar10.evaluate.src.proto import onnx_ml_pb2, predict_pb2, prediction_service_pb2_grpc
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -131,6 +131,7 @@ def evaluate(
     preprocess_transformer: BaseEstimator = PytorchImagePreprocessTransformer,
     softmax_transformer: BaseEstimator = SoftmaxTransformer,
 ) -> Dict:
+    # 推論インスタンス
     classifier = Classifier(
         preprocess_transformer=preprocess_transformer,
         softmax_transformer=softmax_transformer,
@@ -139,11 +140,13 @@ def evaluate(
         onnx_output_name="output",
     )
 
+    # テストデータの一覧
     directory_list = os.listdir(test_data_directory)
     predictions = {}
     predicted = []
     labels = []
     durations = []
+    # テストデータを順次推論し、評価
     for c in directory_list:
         c_path = os.path.join(test_data_directory, c)
         c_list = os.listdir(c_path)
@@ -151,6 +154,7 @@ def evaluate(
         for f in c_list:
             image_path = os.path.join(c_path, f)
             image = Image.open(image_path)
+            # 推論時間を計測
             start = time.time()
             x = classifier.predict_label(image)
             end = time.time()
@@ -160,6 +164,8 @@ def evaluate(
             durations.append(duration)
             predictions[image_path] = {"label": c, "prediction": x}
             logger.info(f"{image_path} label: {c} predicted: {x} duration: {duration} seconds")
+
+    # 結果を集計
     total_time = sum(durations)
     total_tested = len(predicted)
     average_duration_second = total_time / total_tested
@@ -206,14 +212,17 @@ def main():
     os.makedirs(upstream_directory, exist_ok=True)
     os.makedirs(downstream_directory, exist_ok=True)
 
+    # 評価を実行
     result = evaluate(
         test_data_directory=args.test_data_directory,
     )
 
+    # 評価を記録
     log_file = os.path.join(downstream_directory, f"{mlflow_experiment_id}.json")
     with open(log_file, "w") as f:
         json.dump(log_file, f)
 
+    # MLflowで評価を記録
     mlflow.log_metric(
         "total_tested",
         result["evaluation"]["total_tested"],
