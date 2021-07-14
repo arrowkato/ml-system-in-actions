@@ -1,7 +1,7 @@
 import os
 from logging import getLogger
 
-from src.constants import CONSTANTS, PLATFORM_ENUM
+from chapter2_training.cifar10.preprocess.src.constants import CONSTANTS, PLATFORM_ENUM
 
 logger = getLogger(__name__)
 
@@ -13,6 +13,7 @@ class PlatformConfigurations:
 
 
 class PreprocessConfigurations:
+    # ダウンロードした学習データ、テストデータのパス
     train_files = [
         "data_batch_1",
         "data_batch_2",
@@ -22,6 +23,7 @@ class PreprocessConfigurations:
     ]
     test_files = ["test_batch"]
 
+    # クラスラベルとクラス名
     classes = {
         0: "plane",
         1: "car",
