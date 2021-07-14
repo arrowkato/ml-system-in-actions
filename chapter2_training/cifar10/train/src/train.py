@@ -7,8 +7,8 @@ import mlflow.pytorch
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from src.constants import MODEL_ENUM
-from src.model import VGG11, VGG16, Cifar10Dataset, SimpleModel, evaluate, train
+from chapter2_training.cifar10.train.src.constants import MODEL_ENUM
+from chapter2_training.cifar10.train.src.model import VGG11, VGG16, Cifar10Dataset, SimpleModel, evaluate, train
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
@@ -17,6 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+# 学習の実行
 def start_run(
     mlflow_experiment_id: str,
     upstream_directory: str,
@@ -28,11 +29,14 @@ def start_run(
     learning_rate: float,
     model_type: str,
 ):
+    # GPUの使用可否を指定
     device = torch.device(
         "cuda:0" if torch.cuda.is_available() else "cpu",
     )
+    # TensorBoardでログを記録
     writer = SummaryWriter(log_dir=tensorboard_directory)
 
+    # 画像の前処理(Normalization)
     transform = transforms.Compose(
         [
             transforms.ToTensor(),
@@ -51,6 +55,7 @@ def start_run(
         ],
     )
 
+    # データ取得(preprocess)で作ったデータをロード
     train_dataset = Cifar10Dataset(
         data_directory=os.path.join(upstream_directory, "train"),
         transform=transform,
@@ -76,6 +81,7 @@ def start_run(
     if model_type == MODEL_ENUM.SIMPLE_MODEL.value:
         model = SimpleModel().to(device)
     elif model_type == MODEL_ENUM.VGG11.value:
+        # VGG11モデルを初期化
         model = VGG11().to(device)
     elif model_type == MODEL_ENUM.VGG16.value:
         model = VGG16().to(device)
@@ -85,9 +91,11 @@ def start_run(
 
     mlflow.pytorch.log_model(model, "model")
 
+    # 最適化関数を定義
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
+    # 学習
     train(
         model=model,
         train_dataloader=train_dataloader,
@@ -100,6 +108,7 @@ def start_run(
         device=device,
     )
 
+    # 評価
     accuracy, loss = evaluate(
         model=model,
         test_dataloader=test_dataloader,
@@ -112,6 +121,7 @@ def start_run(
 
     writer.close()
 
+    # .pthファイル及び.onnxファイルとしてモデルを保存
     model_file_name = os.path.join(
         downstream_directory,
         f"cifar10_{mlflow_experiment_id}.pth",
@@ -133,6 +143,7 @@ def start_run(
         output_names=["output"],
     )
 
+    # MLflowで学習結果をアーティファクトを記録
     mlflow.log_param("optimizer", "Adam")
     mlflow.log_param(
         "preprocess",
@@ -217,6 +228,7 @@ def main():
     os.makedirs(downstream_directory, exist_ok=True)
     os.makedirs(tensorboard_directory, exist_ok=True)
 
+    # 学習を実行
     start_run(
         mlflow_experiment_id=mlflow_experiment_id,
         upstream_directory=upstream_directory,

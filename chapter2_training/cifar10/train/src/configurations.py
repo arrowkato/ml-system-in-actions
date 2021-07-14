@@ -1,7 +1,7 @@
 import os
 from logging import getLogger
 
-from src.constants import CONSTANTS, PLATFORM_ENUM
+from chapter2_training.cifar10.train.src.constants import CONSTANTS, PLATFORM_ENUM
 
 logger = getLogger(__name__)
 
