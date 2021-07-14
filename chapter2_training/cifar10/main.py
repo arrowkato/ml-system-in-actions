@@ -10,6 +10,7 @@ def main():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
+    # ↓↓↓argparseの説明は省略↓↓↓
     parser.add_argument(
         "--commit_hash",
         type=str,
@@ -113,9 +114,12 @@ def main():
     )
 
     args = parser.parse_args()
+    # ↑↑↑argparseの説明は省略↑↑↑
+
     mlflow_experiment_id = int(os.getenv("MLFLOW_EXPERIMENT_ID", 0))
 
     with mlflow.start_run() as r:
+        # 前処理: データ取得 実体は、/ml-system-in-actions/chapter2_training/cifar10/preprocess/src/preprocess.py
         preprocess_run = mlflow.run(
             uri="./preprocess",
             entry_point="preprocess",
@@ -134,7 +138,7 @@ def main():
             preprocess_run.info.run_id,
             "artifacts/downstream_directory",
         )
-
+        # 学習
         train_run = mlflow.run(
             uri="./train",
             entry_point="train",
@@ -151,7 +155,7 @@ def main():
             },
         )
         train_run = mlflow.tracking.MlflowClient().get_run(train_run.run_id)
-
+        # ビルド
         building_run = mlflow.run(
             uri="./building",
             entry_point="building",
@@ -170,7 +174,7 @@ def main():
             },
         )
         building_run = mlflow.tracking.MlflowClient().get_run(building_run.run_id)
-
+        # 評価
         evaluate_run = mlflow.run(
             uri="./evaluate",
             entry_point="evaluate",
